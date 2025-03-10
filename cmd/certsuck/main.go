@@ -76,6 +76,7 @@ func run(host string) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("found %d valid chains\n", len(chains))
 	printChain(os.Stdout,  chains[0])
 	printPEMChain(os.Stdout, chains[0])
 	return nil
