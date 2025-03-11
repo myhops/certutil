@@ -1,0 +1,83 @@
+package main
+
+import (
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+)
+
+func main() {
+	// Connect to the remote server
+	conn, err := tls.Dial("tcp", "remote-server.com:443", &tls.Config{
+		InsecureSkipVerify: true, // Skip verification for demonstration purposes
+	})
+	if err != nil {
+		fmt.Printf("Error connecting to server: %v\n", err)
+		return
+	}
+	defer conn.Close()
+
+	// Get the server's certificate chain
+	certs := conn.ConnectionState().PeerCertificates
+
+	// Print the certificate chain
+	for i, cert := range certs {
+		fmt.Printf("Certificate %d:\n", i)
+		fmt.Printf("  Subject: %s\n", cert.Subject)
+		fmt.Printf("  Issuer: %s\n", cert.Issuer)
+		fmt.Printf("  Not Before: %s\n", cert.NotBefore)
+		fmt.Printf("  Not After: %s\n", cert.NotAfter)
+		fmt.Println()
+	}
+
+	// Load CA certificate
+	// caCert, err := os.ReadFile("path/to/ca-cert.pem")
+	// if err != nil {
+	// 	fmt.Printf("Error loading CA certificate: %v\n", err)
+	// 	return
+	// }
+	caCert, err := x509.SystemCertPool()
+	if err != nil {
+		fmt.Printf("Error loading CA certificate: %v\n", err)
+		return
+	}
+
+	// Create a CA certificate pool
+	caCertPool := caCert
+	// if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
+	// 	fmt.Println("Failed to append CA certificate")
+	// 	return
+	// }
+
+	// Verify the certificate chain
+	opts := x509.VerifyOptions{
+		Roots: caCertPool,
+	}
+	for _, cert := range certs {
+		if _, err := cert.Verify(opts); err != nil {
+			fmt.Printf("Failed to verify certificate: %v\n", err)
+		} else {
+			fmt.Println("Certificate verified successfully")
+		}
+	}
+
+	// // Manually add the root CA to the certificate pool
+	// rootCert, err := os.ReadFile("path/to/root-ca-cert.pem")
+	// if err != nil {
+	// 	fmt.Printf("Error loading root CA certificate: %v\n", err)
+	// 	return
+	// }
+	// if ok := caCertPool.AppendCertsFromPEM(rootCert); !ok {
+	// 	fmt.Println("Failed to append root CA certificate")
+	// 	return
+	// }
+
+	// Verify the certificate chain again with the root CA included
+	for _, cert := range certs {
+		if _, err := cert.Verify(opts); err != nil {
+			fmt.Printf("Failed to verify certificate with root CA: %v\n", err)
+		} else {
+			fmt.Println("Certificate verified successfully with root CA")
+		}
+	}
+}
